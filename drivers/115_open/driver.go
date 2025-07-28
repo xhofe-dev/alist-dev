@@ -299,7 +299,7 @@ func (d *Open115) Put(ctx context.Context, dstDir model.Obj, file model.FileStre
 		return err
 	}
 	// 4. upload
-	err = d.multpartUpload(ctx, tempF, file, up, tokenResp, resp)
+	err = d.singleUpload(ctx, tempF, tokenResp, resp)
 	if err != nil {
 		return err
 	}
