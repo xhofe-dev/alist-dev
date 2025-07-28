@@ -92,6 +92,7 @@ jobs:
           targets: ${{ matrix.target }}
           musl-target-format: $os-$musl-$arch
           out-dir: build
+          output: alist-$target$ext
           x-flags: |
             github.com/alist-org/alist/v3/internal/conf.BuiltAt=$built_at
             github.com/alist-org/alist/v3/internal/conf.GitAuthor=Xhofe
@@ -119,7 +120,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          repository: AlistGo/desktop-release
+          repository: alist-org/desktop-release
           ref: main
           persist-credentials: false
           fetch-depth: 0
@@ -135,4 +136,4 @@ jobs:
         with:
           github_token: ${{ secrets.MY_TOKEN }}
           branch: main
-          repository: AlistGo/desktop-release
+          repository: alist-org/desktop-release
