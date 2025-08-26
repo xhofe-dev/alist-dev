@@ -23,6 +23,7 @@ type CreateLabelFileBinDingReq struct {
 	Type        int       `json:"type"`
 	HashInfoStr string    `json:"hashinfo"`
 	LabelIds    string    `json:"label_ids"`
+	LabelIDs    []uint64  `json:"labelIdList"`
 }
 
 type ObjLabelResp struct {
@@ -54,23 +55,29 @@ func GetLabelByFileName(userId uint, fileName string) ([]model.Label, error) {
 	return labels, nil
 }
 
+func GetLabelsByFileNamesPublic(fileNames []string) (map[string][]model.Label, error) {
+	return db.GetLabelsByFileNamesPublic(fileNames)
+}
+
 func CreateLabelFileBinDing(req CreateLabelFileBinDingReq, userId uint) error {
 	if err := db.DelLabelFileBinDingByFileName(userId, req.Name); err != nil {
 		return errors.WithMessage(err, "failed del label_file_bin_ding in database")
 	}
-	if req.LabelIds == "" {
+
+	ids, err := collectLabelIDs(req)
+	if err != nil {
+		return err
+	}
+	if len(ids) == 0 {
 		return nil
 	}
-	labelMap := strings.Split(req.LabelIds, ",")
-	for _, value := range labelMap {
-		labelId, err := strconv.ParseUint(value, 10, 64)
-		if err != nil {
-			return fmt.Errorf("invalid label ID '%s': %v", value, err)
-		}
-		if err = db.CreateLabelFileBinDing(req.Name, uint(labelId), userId); err != nil {
+
+	for _, id := range ids {
+		if err = db.CreateLabelFileBinDing(req.Name, uint(id), userId); err != nil {
 			return errors.WithMessage(err, "failed labels in database")
 		}
 	}
+
 	if !db.GetFileByNameExists(req.Name) {
 		objFile := model.ObjFile{
 			Id:          req.Id,
@@ -86,8 +93,7 @@ func CreateLabelFileBinDing(req CreateLabelFileBinDingReq, userId uint) error {
 			Type:        req.Type,
 			HashInfoStr: req.HashInfoStr,
 		}
-		err := db.CreateObjFile(objFile)
-		if err != nil {
+		if err := db.CreateObjFile(objFile); err != nil {
 			return errors.WithMessage(err, "failed file in database")
 		}
 	}
@@ -97,7 +103,7 @@ func CreateLabelFileBinDing(req CreateLabelFileBinDingReq, userId uint) error {
 func GetFileByLabel(userId uint, labelId string) (result []ObjLabelResp, err error) {
 	labelMap := strings.Split(labelId, ",")
 	var labelIds []uint
-	var labelsFile []model.LabelFileBinDing
+	var labelsFile []model.LabelFileBinding
 	var labels []model.Label
 	var labelsFileMap = make(map[string][]model.Label)
 	var labelsMap = make(map[uint]model.Label)
@@ -156,4 +162,34 @@ func StringSliceToUintSlice(strSlice []string) ([]uint, error) {
 		uintSlice[i] = uint(uint64Value)
 	}
 	return uintSlice, nil
+}
+
+func RestoreLabelFileBindings(bindings []model.LabelFileBinding, keepIDs bool, override bool) error {
+	return db.RestoreLabelFileBindings(bindings, keepIDs, override)
+}
+
+func collectLabelIDs(req CreateLabelFileBinDingReq) ([]uint64, error) {
+	if len(req.LabelIDs) > 0 {
+		return req.LabelIDs, nil
+	}
+	s := strings.TrimSpace(req.LabelIds)
+	if s == "" {
+		return nil, nil
+	}
+	replacer := strings.NewReplacer("，", ",", "、", ",", "；", ",", ";", ",")
+	s = replacer.Replace(s)
+	parts := strings.Split(s, ",")
+	ids := make([]uint64, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		id, err := strconv.ParseUint(p, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid label ID '%s': %v", p, err)
+		}
+		ids = append(ids, id)
+	}
+	return ids, nil
 }

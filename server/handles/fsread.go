@@ -107,14 +107,21 @@ func FsList(c *gin.Context) {
 		common.ErrorResp(c, err, 500)
 		return
 	}
-	total, objs := pagination(objs, &req.PageReq)
+	filtered := make([]model.Obj, 0, len(objs))
+	for _, obj := range objs {
+		childPath := stdpath.Join(reqPath, obj.GetName())
+		if common.CanReadPathByRole(user, childPath) {
+			filtered = append(filtered, obj)
+		}
+	}
+	total, objs := pagination(filtered, &req.PageReq)
 	provider := "unknown"
 	storage, err := fs.GetStorage(reqPath, &fs.GetStoragesArgs{})
 	if err == nil {
 		provider = storage.GetStorage().Driver
 	}
 	common.SuccessResp(c, FsListResp{
-		Content:  toObjsResp(objs, reqPath, isEncrypt(meta, reqPath), user.ID),
+		Content:  toObjsResp(objs, reqPath, isEncrypt(meta, reqPath)),
 		Total:    int64(total),
 		Readme:   getReadme(meta, reqPath),
 		Header:   getHeader(meta, reqPath),
@@ -161,7 +168,14 @@ func FsDirs(c *gin.Context) {
 		common.ErrorResp(c, err, 500)
 		return
 	}
-	dirs := filterDirs(objs)
+	visible := make([]model.Obj, 0, len(objs))
+	for _, obj := range objs {
+		childPath := stdpath.Join(reqPath, obj.GetName())
+		if common.CanReadPathByRole(user, childPath) {
+			visible = append(visible, obj)
+		}
+	}
+	dirs := filterDirs(visible)
 	common.SuccessResp(c, dirs)
 }
 
@@ -224,12 +238,22 @@ func pagination(objs []model.Obj, req *model.PageReq) (int, []model.Obj) {
 	return total, objs[start:end]
 }
 
-func toObjsResp(objs []model.Obj, parent string, encrypt bool, userId uint) []ObjLabelResp {
+func toObjsResp(objs []model.Obj, parent string, encrypt bool) []ObjLabelResp {
 	var resp []ObjLabelResp
+
+	names := make([]string, 0, len(objs))
+	for _, obj := range objs {
+		if !obj.IsDir() {
+			names = append(names, obj.GetName())
+		}
+	}
+
+	labelsByName, _ := op.GetLabelsByFileNamesPublic(names)
+
 	for _, obj := range objs {
 		var labels []model.Label
-		if obj.IsDir() == false {
-			labels, _ = op.GetLabelByFileName(userId, obj.GetName())
+		if !obj.IsDir() {
+			labels = labelsByName[obj.GetName()]
 		}
 		thumb, _ := model.GetThumb(obj)
 		resp = append(resp, ObjLabelResp{
@@ -369,7 +393,7 @@ func FsGet(c *gin.Context) {
 		Readme:   getReadme(meta, reqPath),
 		Header:   getHeader(meta, reqPath),
 		Provider: provider,
-		Related:  toObjsResp(related, parentPath, isEncrypt(parentMeta, parentPath), user.ID),
+		Related:  toObjsResp(related, parentPath, isEncrypt(parentMeta, parentPath)),
 	})
 }
 

@@ -91,6 +91,7 @@ func InitialSettings() []model.SettingItem {
 	} else {
 		token = random.Token()
 	}
+	defaultRoleID := strconv.Itoa(model.GUEST)
 	initialSettingItems = []model.SettingItem{
 		// site settings
 		{Key: conf.VERSION, Value: conf.Version, Type: conf.TypeString, Group: model.SITE, Flag: model.READONLY},
@@ -103,6 +104,8 @@ func InitialSettings() []model.SettingItem {
 		{Key: conf.AllowIndexed, Value: "false", Type: conf.TypeBool, Group: model.SITE},
 		{Key: conf.AllowMounted, Value: "true", Type: conf.TypeBool, Group: model.SITE},
 		{Key: conf.RobotsTxt, Value: "User-agent: *\nAllow: /", Type: conf.TypeText, Group: model.SITE},
+		{Key: conf.AllowRegister, Value: "false", Type: conf.TypeBool, Group: model.SITE},
+		{Key: conf.DefaultRole, Value: defaultRoleID, Type: conf.TypeSelect, Group: model.SITE},
 		// newui settings
 		{Key: conf.UseNewui, Value: "false", Type: conf.TypeBool, Group: model.SITE},
 		// style settings
@@ -162,6 +165,9 @@ func InitialSettings() []model.SettingItem {
 		{Key: conf.ForwardDirectLinkParams, Value: "false", Type: conf.TypeBool, Group: model.GLOBAL},
 		{Key: conf.IgnoreDirectLinkParams, Value: "sign,alist_ts", Type: conf.TypeString, Group: model.GLOBAL},
 		{Key: conf.WebauthnLoginEnabled, Value: "false", Type: conf.TypeBool, Group: model.GLOBAL, Flag: model.PUBLIC},
+		{Key: conf.MaxDevices, Value: "0", Type: conf.TypeNumber, Group: model.GLOBAL},
+		{Key: conf.DeviceEvictPolicy, Value: "deny", Type: conf.TypeSelect, Options: "deny,evict_oldest", Group: model.GLOBAL},
+		{Key: conf.DeviceSessionTTL, Value: "86400", Type: conf.TypeNumber, Group: model.GLOBAL},
 
 		// single settings
 		{Key: conf.Token, Value: token, Type: conf.TypeString, Group: model.SINGLE, Flag: model.PRIVATE},

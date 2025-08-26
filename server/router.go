@@ -22,6 +22,7 @@ func Init(e *gin.Engine) {
 		})
 	}
 	Cors(e)
+	e.Use(middlewares.SessionRefresh)
 	g := e.Group(conf.URL.Path)
 	if conf.Conf.Scheme.HttpPort != -1 && conf.Conf.Scheme.HttpsPort != -1 && conf.Conf.Scheme.ForceHttps {
 		e.Use(middlewares.ForceHttps)
@@ -61,6 +62,7 @@ func Init(e *gin.Engine) {
 	api.POST("/auth/login", handles.Login)
 	api.POST("/auth/login/hash", handles.LoginHash)
 	api.POST("/auth/login/ldap", handles.LoginLdap)
+	api.POST("/auth/register", handles.Register)
 	auth.GET("/me", handles.CurrentUser)
 	auth.POST("/me/update", handles.UpdateCurrent)
 	auth.GET("/me/sshkey/list", handles.ListMyPublicKey)
@@ -69,6 +71,8 @@ func Init(e *gin.Engine) {
 	auth.POST("/auth/2fa/generate", handles.Generate2FA)
 	auth.POST("/auth/2fa/verify", handles.Verify2FA)
 	auth.GET("/auth/logout", handles.LogOut)
+	auth.GET("/me/sessions", handles.ListMySessions)
+	auth.POST("/me/sessions/evict", handles.EvictMySession)
 
 	// auth
 	api.GET("/auth/sso", handles.SSOLoginRedirect)
@@ -92,6 +96,8 @@ func Init(e *gin.Engine) {
 
 	_fs(auth.Group("/fs"))
 	_task(auth.Group("/task", middlewares.AuthNotGuest))
+	_label(auth.Group("/label"))
+	_labelFileBinding(auth.Group("/label_file_binding"))
 	admin(auth.Group("/admin", middlewares.AuthAdmin))
 	if flags.Debug || flags.Dev {
 		debug(g.Group("/debug"))
@@ -170,17 +176,21 @@ func admin(g *gin.RouterGroup) {
 	index.GET("/progress", middlewares.SearchIndex, handles.GetProgress)
 
 	label := g.Group("/label")
-	label.GET("/list", handles.ListLabel)
-	label.GET("/get", handles.GetLabel)
 	label.POST("/create", handles.CreateLabel)
 	label.POST("/update", handles.UpdateLabel)
 	label.POST("/delete", handles.DeleteLabel)
 
 	labelFileBinding := g.Group("/label_file_binding")
-	labelFileBinding.GET("/get", handles.GetLabelByFileName)
-	labelFileBinding.GET("/get_file_by_label", handles.GetFileByLabel)
+	labelFileBinding.GET("/list", handles.ListLabelFileBinding)
 	labelFileBinding.POST("/create", handles.CreateLabelFileBinDing)
+	labelFileBinding.POST("/create_batch", handles.CreateLabelFileBinDingBatch)
 	labelFileBinding.POST("/delete", handles.DelLabelByFileName)
+	labelFileBinding.POST("/restore", handles.RestoreLabelFileBinding)
+
+	session := g.Group("/session")
+	session.GET("/list", handles.ListSessions)
+	session.POST("/evict", handles.EvictSession)
+
 }
 
 func _fs(g *gin.RouterGroup) {
@@ -214,6 +224,16 @@ func _fs(g *gin.RouterGroup) {
 
 func _task(g *gin.RouterGroup) {
 	handles.SetupTaskRoute(g)
+}
+
+func _label(g *gin.RouterGroup) {
+	g.GET("/list", handles.ListLabel)
+	g.GET("/get", handles.GetLabel)
+}
+
+func _labelFileBinding(g *gin.RouterGroup) {
+	g.GET("/get", handles.GetLabelByFileName)
+	g.GET("/get_file_by_label", handles.GetFileByLabel)
 }
 
 func Cors(r *gin.Engine) {

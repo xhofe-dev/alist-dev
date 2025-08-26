@@ -36,6 +36,9 @@ func CreateUser(c *gin.Context) {
 		common.ErrorResp(c, err, 400)
 		return
 	}
+	if len(req.Role) == 0 {
+		req.Role = model.Roles{op.GetDefaultRoleID()}
+	}
 	if req.IsAdmin() || req.IsGuest() {
 		common.ErrorStrResp(c, "admin or guest user can not be created", 400, true)
 		return
@@ -67,10 +70,10 @@ func UpdateUser(c *gin.Context) {
 			common.ErrorStrResp(c, "cannot change role of admin user", 403)
 			return
 		}
-		if user.Username != req.Username {
-			common.ErrorStrResp(c, "cannot change username of admin user", 403)
-			return
-		}
+		//if user.Username != req.Username {
+		//	common.ErrorStrResp(c, "cannot change username of admin user", 403)
+		//	return
+		//}
 	}
 
 	if req.Password == "" {

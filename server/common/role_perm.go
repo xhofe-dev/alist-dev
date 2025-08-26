@@ -43,9 +43,15 @@ func MergeRolePermissions(u *model.User, reqPath string) int32 {
 		if err != nil {
 			continue
 		}
-		for _, entry := range role.PermissionScopes {
-			if utils.IsSubPath(entry.Path, reqPath) {
+		if reqPath == "/" || utils.PathEqual(reqPath, u.BasePath) {
+			for _, entry := range role.PermissionScopes {
 				perm |= entry.Permission
+			}
+		} else {
+			for _, entry := range role.PermissionScopes {
+				if utils.IsSubPath(entry.Path, reqPath) {
+					perm |= entry.Permission
+				}
 			}
 		}
 	}
@@ -53,7 +59,7 @@ func MergeRolePermissions(u *model.User, reqPath string) int32 {
 }
 
 func CanAccessWithRoles(u *model.User, meta *model.Meta, reqPath, password string) bool {
-	if !canReadPathByRole(u, reqPath) {
+	if !CanReadPathByRole(u, reqPath) {
 		return false
 	}
 	perm := MergeRolePermissions(u, reqPath)
@@ -78,7 +84,30 @@ func CanAccessWithRoles(u *model.User, meta *model.Meta, reqPath, password strin
 	return meta.Password == password
 }
 
-func canReadPathByRole(u *model.User, reqPath string) bool {
+func CanReadPathByRole(u *model.User, reqPath string) bool {
+	if u == nil {
+		return false
+	}
+	if reqPath == "/" || utils.PathEqual(reqPath, u.BasePath) {
+		return len(u.Role) > 0
+	}
+	for _, rid := range u.Role {
+		role, err := op.GetRole(uint(rid))
+		if err != nil {
+			continue
+		}
+		for _, entry := range role.PermissionScopes {
+			if utils.PathEqual(entry.Path, reqPath) || utils.IsSubPath(entry.Path, reqPath) || utils.IsSubPath(reqPath, entry.Path) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// HasChildPermission checks whether any child path under reqPath grants the
+// specified permission bit.
+func HasChildPermission(u *model.User, reqPath string, bit uint) bool {
 	if u == nil {
 		return false
 	}
@@ -88,7 +117,7 @@ func canReadPathByRole(u *model.User, reqPath string) bool {
 			continue
 		}
 		for _, entry := range role.PermissionScopes {
-			if utils.IsSubPath(entry.Path, reqPath) {
+			if utils.IsSubPath(reqPath, entry.Path) && HasPermission(entry.Permission, bit) {
 				return true
 			}
 		}
@@ -102,7 +131,7 @@ func canReadPathByRole(u *model.User, reqPath string) bool {
 func CheckPathLimitWithRoles(u *model.User, reqPath string) bool {
 	perm := MergeRolePermissions(u, reqPath)
 	if HasPermission(perm, PermPathLimit) {
-		return canReadPathByRole(u, reqPath)
+		return CanReadPathByRole(u, reqPath)
 	}
 	return true
 }

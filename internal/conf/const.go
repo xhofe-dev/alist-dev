@@ -10,13 +10,15 @@ const (
 
 const (
 	// site
-	VERSION      = "version"
-	SiteTitle    = "site_title"
-	Announcement = "announcement"
-	AllowIndexed = "allow_indexed"
-	AllowMounted = "allow_mounted"
-	RobotsTxt    = "robots_txt"
-	UseNewui     = "use_newui"
+	VERSION       = "version"
+	SiteTitle     = "site_title"
+	Announcement  = "announcement"
+	AllowIndexed  = "allow_indexed"
+	AllowMounted  = "allow_mounted"
+	RobotsTxt     = "robots_txt"
+	AllowRegister = "allow_register"
+	DefaultRole   = "default_role"
+	UseNewui      = "use_newui"
 
 	Logo      = "logo"
 	Favicon   = "favicon"
@@ -46,6 +48,9 @@ const (
 	ForwardDirectLinkParams = "forward_direct_link_params"
 	IgnoreDirectLinkParams  = "ignore_direct_link_params"
 	WebauthnLoginEnabled    = "webauthn_login_enabled"
+	MaxDevices              = "max_devices"
+	DeviceEvictPolicy       = "device_evict_policy"
+	DeviceSessionTTL        = "device_session_ttl"
 
 	// index
 	SearchIndex     = "search_index"
