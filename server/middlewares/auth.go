@@ -26,7 +26,7 @@ func Auth(c *gin.Context) {
 			c.Abort()
 			return
 		}
-		if !handleSession(c, admin) {
+		if !HandleSession(c, admin) {
 			return
 		}
 		log.Debugf("use admin token: %+v", admin)
@@ -54,7 +54,7 @@ func Auth(c *gin.Context) {
 			}
 			guest.RolesDetail = roles
 		}
-		if !handleSession(c, guest) {
+		if !HandleSession(c, guest) {
 			return
 		}
 		log.Debugf("use empty token: %+v", guest)
@@ -93,14 +93,15 @@ func Auth(c *gin.Context) {
 		}
 		user.RolesDetail = roles
 	}
-	if !handleSession(c, user) {
+	if !HandleSession(c, user) {
 		return
 	}
 	log.Debugf("use login token: %+v", user)
 	c.Next()
 }
 
-func handleSession(c *gin.Context, user *model.User) bool {
+// HandleSession verifies device sessions and stores context values.
+func HandleSession(c *gin.Context, user *model.User) bool {
 	clientID := c.GetHeader("Client-Id")
 	if clientID == "" {
 		clientID = c.Query("client_id")
