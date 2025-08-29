@@ -15,6 +15,7 @@ import (
 	"github.com/alist-org/alist/v3/internal/session"
 	"github.com/alist-org/alist/v3/internal/setting"
 	"github.com/alist-org/alist/v3/server/common"
+	"github.com/alist-org/alist/v3/server/middlewares"
 	"github.com/gin-gonic/gin"
 	"github.com/pquerna/otp/totp"
 )
@@ -82,13 +83,18 @@ func loginHash(c *gin.Context, req *LoginReq) {
 			return
 		}
 	}
+	// generate device session
+	if !middlewares.HandleSession(c, user) {
+		return
+	}
 	// generate token
 	token, err := common.GenerateToken(user)
 	if err != nil {
 		common.ErrorResp(c, err, 400, true)
 		return
 	}
-	common.SuccessResp(c, gin.H{"token": token})
+	key := c.GetString("device_key")
+	common.SuccessResp(c, gin.H{"token": token, "device_key": key})
 	loginCache.Del(ip)
 }
 
