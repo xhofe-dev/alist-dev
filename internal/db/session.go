@@ -26,9 +26,11 @@ func DeleteSession(userID uint, deviceKey string) error {
 	return errors.WithStack(db.Where("user_id = ? AND device_key = ?", userID, deviceKey).Delete(&model.Session{}).Error)
 }
 
-func CountSessionsByUser(userID uint) (int64, error) {
+func CountActiveSessionsByUser(userID uint) (int64, error) {
 	var count int64
-	err := db.Model(&model.Session{}).Where("user_id = ?", userID).Count(&count).Error
+	err := db.Model(&model.Session{}).
+		Where("user_id = ? AND status = ?", userID, model.SessionActive).
+		Count(&count).Error
 	return count, errors.WithStack(err)
 }
 
