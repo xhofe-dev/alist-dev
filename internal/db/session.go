@@ -26,9 +26,11 @@ func DeleteSession(userID uint, deviceKey string) error {
 	return errors.WithStack(db.Where("user_id = ? AND device_key = ?", userID, deviceKey).Delete(&model.Session{}).Error)
 }
 
-func CountSessionsByUser(userID uint) (int64, error) {
+func CountActiveSessionsByUser(userID uint) (int64, error) {
 	var count int64
-	err := db.Model(&model.Session{}).Where("user_id = ?", userID).Count(&count).Error
+	err := db.Model(&model.Session{}).
+		Where("user_id = ? AND status = ?", userID, model.SessionActive).
+		Count(&count).Error
 	return count, errors.WithStack(err)
 }
 
@@ -36,10 +38,12 @@ func DeleteSessionsBefore(ts int64) error {
 	return errors.WithStack(db.Where("last_active < ?", ts).Delete(&model.Session{}).Error)
 }
 
-func GetOldestSession(userID uint) (*model.Session, error) {
+// GetOldestActiveSession returns the oldest active session for the specified user.
+func GetOldestActiveSession(userID uint) (*model.Session, error) {
 	var s model.Session
-	if err := db.Where("user_id = ?", userID).Order("last_active ASC").First(&s).Error; err != nil {
-		return nil, errors.Wrap(err, "failed get oldest session")
+	if err := db.Where("user_id = ? AND status = ?", userID, model.SessionActive).
+		Order("last_active ASC").First(&s).Error; err != nil {
+		return nil, errors.Wrap(err, "failed get oldest active session")
 	}
 	return &s, nil
 }
